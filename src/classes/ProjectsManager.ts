@@ -117,7 +117,7 @@ export class ProjectsManager{
         URL.revokeObjectURL(url)//revoke the URL, giải phóng URL, nghĩa là giải phóng bộ nhớ đã được cấp phát cho URL, reset URL
     }
 
-    importFromJSON() {//for importing projects
+    importFromJSON() {//for importing projects data
         const input = document.createElement('input')//create a new input element, tạo một phần tử input mới
         input.type = 'file'//set the type attribute of the input element to 'file', set giá trị của type của 'input' là 'file'
         input.accept = 'application/json'//set the accept attribute of the input element to 'application/json', set giá trị của accept của 'input' là 'application/json'
