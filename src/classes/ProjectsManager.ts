@@ -56,6 +56,7 @@ export class ProjectsManager{
                 return}
             projectsPage.style.display = "none"//ẩn projectsPage
             detailPage.style.display = "flex"//hiện detailPage
+            this.setDetailsPage(project)//setDetailsPage
             })
         
 
@@ -64,11 +65,19 @@ export class ProjectsManager{
         return project//trả về project mới
     }
     
+    private setDetailsPage(project){
+        const detailsPage = document.getElementById("project-details")//lấy phần tử DOM với id "project-details"
+        if (!detailsPage) {return}//nếu không có detailsPage thì return
+        const name = detailsPage.querySelector("[data-project-info='name']")
+        if(name) {name.textContent = project.name}//nếu có name thì gán project.name vào name
+        }
 
+
+    /*
     clearList(){
         this.list.pop[0];//xóa project đầu tiên trong mảng list
         this.ui.removeChild(this.ui.children[0])//xóa project đầu tiên trong UI
-    }
+    }*/
 
 
     //Intoduction to Unique Project ID - UUID
