@@ -10,9 +10,17 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "vite": "^5.4.11"
+    "vite": "^5.4.21"
   },
   "dependencies": {
     "uuid": "^11.0.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duongbinharch/TOM_Module_02.git"
+  },
+  "bugs": {
+    "url": "https://github.com/duongbinharch/TOM_Module_02/issues"
+  },
+  "homepage": "https://github.com/duongbinharch/TOM_Module_02#readme"
 }

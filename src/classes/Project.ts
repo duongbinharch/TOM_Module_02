@@ -10,84 +10,137 @@ export type ProjectStatus =  "pending" | "active" | "finished" //Tạo datatype 
 export type UserRole = "architect" | "engineer" | "developer" //Tạo datatype cho userRole, chỉ chấp nhận 3 giá trị là "architect", "engineer", "developer"
 
 export interface IProject{//IProject with I just for Interface is a common naming convention in TypeScript, and to avoid naming conflicts with the class Project
-    name: string
-    description: string
-    status: ProjectStatus
-    userRole: UserRole
-    finishDate: Date
-    // describle object datatypes
+  // describle object datatypes
+  name: string
+  description: string
+  status: ProjectStatus
+  userRole: UserRole
+  finishDate: Date
+  //Additional properties for class internal use
+  cost?: number
+  initials?: string
+  progress?: number
+  id?: string
+  //todoList?: ToDo[]
 }
 
 
 export class Project implements IProject{//use the "implements" keyword to implement the IProject interface, the class must use the type as the interface
-    //To satify IProject interface, we need to have the following properties
-    name: string
-    description: string
-    status: "pending" | "active" | "finished"
-    userRole: "architect" | "engineer" | "developer"
-    finishDate: Date
-    //object template
-
-    //Class internal
-    ui: HTMLDivElement
-    cost: number = 0 //default value
-    process: number = 0 //default value
-    id: string
-
-    constructor(data: IProject){//constructor is a special method in a class that is called when a new instance of the class is created, and it is used to initialize the object's properties
-        //Project data definition
-        /*
-        this.name = data.name //"this" is a special keyword in JavaScript that refers to the object that "owns" the code, inside the class like the items above
-        this.description = data.description
-        this.status = data.status
-        this.userRole = data.userRole
-        this.finishDate = data.finishDate
-        */
-
-        //atternate way to set properties with interating over the keys of the object
-        for (const key in data) {
-            this[key] = data[key]
-        }
-
-        this.id = uuidv4()//tạo ra một unique id cho project
-        this.setUI()
+  //To satify IProject interface, we need to have the following properties
+  name!: string //! có nghĩa là property sẽ được khởi tạo sau trong constructor
+  description!: string
+  status!: ProjectStatus
+  userRole!: UserRole
+  finishDate!: Date
+  //Additional properties to satisfy IProject interface
+  
+  initials!: string
+  initialsColor: string = "#000000" //default value
+  ui!: HTMLDivElement
+  cost: number = 0 //default value
+  id!: string
+  progress: number = 0 //default value
+  shortFinishDate!: string
+  
+  constructor(data: IProject){//constructor is a special method in a class that is called when a new instance of the class is created, and it is used to initialize the object's properties
+    //Project data definition
+    /* Assign properties one by one
+    this.name = data.name //"this" is a special keyword in JavaScript that refers to the object that "owns" the code, inside the class like the items above
+    this.description = data.description
+    this.status = data.status
+    this.userRole = data.userRole
+    this.finishDate = data.finishDate
+    */
     
+    /*Alternate way to set properties with interating over the keys of the object
+    for (const key in data) {
+    this[key] = data[key]//gán giá trị của data[key] cho this[key]
     }
+    */
+    
+    Object.assign(this, data)//Another way to assign properties from data to this object
+    this.id = uuidv4()//tạo ra một unique id cho project
+    this.findInitials()
+    this.setShortFinishDate()
+    this.setUI()//setUi bên dưới
+    
+  }
+  findInitials() {
+    console.warn("P - findInitials invoked")
+    if (!this.name) { return }
+    const words = this.name.split(' ', 2)
+    const map1 = words.map((x) => x.charAt(0))
+    if (map1[1]) {
+      this.initials = map1[0] + map1[1] as string
+    } else {
+      this.initials = map1[0] as string
+    }
+    
+    function getRandomInt(max : number): number {
+      return Math.floor(Math.random() * max);
+    }
+    const random = getRandomInt(11)
+    const colors = Array.of("powderblue", "lightsteelblue", "lightblue", "darkseagreen", "palegoldenrod", "lightslategrey", "cadetblue", "rosybrown", "silver", "tan", "indianred")
+    this.initialsColor = colors[random]
+    console.log("Initials color: ", this.initialsColor, random)
+  }
+  setShortFinishDate() {
+        this.shortFinishDate = new Date (this.finishDate).toLocaleDateString("vi-VN")
+    }
+  //Tạo project card UI trên page index.html, setUI method
+  setUI() {
+    //Project card UI> ĐẨY CÁC THÔNG TIN PROJECT VÀ PROJECTS LIST của index.html
+    if (this.ui && this.ui instanceof HTMLElement) {return}//kiểm tra ui, thỉ thoảng project data được imported từ 1 data có chứa key "ui" nên cần kiểm tra xem ui có phải là HTMLElement không?
+    //Hàm điều kiện trên nếu hok thỏa mãn, tức là hok có ui hoặc ui sai định dạng, thì ui của 1 project card mới sẽ được tự động tạo ra.
+    //const card = document.createElement('div')//create a new div element, bởi vì div là một container element mà ta dùng trong idex.html
+    this.ui = document.createElement('div')
+    this.ui.className = "project-card"
+    this.ui.innerHTML = 
+    `<div class="card">
+      <div class="card-header">
+        <p data-project-info="initials" style="background-color: ${this.initialsColor}; padding:10px; border-radius: 8px; aspect-ratio: 1">${this.initials}</p>
+        <div>
+          <h5 data-project-info="name">${this.name}</h5>
+          <h5 data-project-info="description" class="description">${this.description}</h5>
+        </div>
+      </div>
+      <div class="card-content">
+        <div style="display: none" class="card-property">
+          <p style="color: #969696;">Id</p>
+          <p data-project-info="id">${this.id}</p>
+        </div>
+        <div class="card-property">
+          <p style="color: #969696;">Status</p>
+          <p data-project-info="status">${this.status}</p>
+        </div>
+        <div class="card-property">
+          <p style="color: #969696;">Role</p>
+          <p data-project-info="userRole">${this.userRole}</p>
+        </div>
+        <div class="card-property">
+          <p style="color: #969696;">Cost</p>
+          <p data-project-info="cost">$${this.cost}</p>
+        </div>
+        <div style="display:none" class="card-property">
+          <p style="color: #969696;">Finish Date</p>
+          <p data-project-info="finishDate">${this.finishDate}</p>
+        </div>
+        <div class="card-property">
+          <p style="color: #969696;">Finish Date</p>
+          <p data-project-info="shortFinishDate">${this.shortFinishDate}</p>
+        </div>
+        <div class="card-property">
+          <p style="color: #969696;">Estimated Progress</p>
+          <p data-project-info="progress">${this.progress}%</p>
+        </div>
+        <div style="display:none" class="card-property">
+          <p style="color: #969696;">Initials</p>
+          <p data-project-info="initials" style="text-transform: uppercase">${this.initials}</p>
+        </div>
 
-    //Tạo project card UI trên page index.html //cũng tương đương với action importFromJSON() trong ProjectsManager.ts, tạo các project card bằng data imported
-    setUI() {
-        //Project card UI> ĐẨY CÁC THÔNG TIN PROJECT VÀ PROJECTS LIST của index.html
-        if (this.ui && this.ui instanceof HTMLElement) {return}//kiểm tra ui, thỉ thoảng project data được imported từ 1 data có chứa key "ui" nên cần kiểm tra xem ui có phải là HTMLElement không?
-        //Hàm điều kiện trên nếu hok thỏa mãn, tức là hok có ui hoặc ui sai định dạng, thì ui của 1 project card mới sẽ được tự động tạo ra.
-        //const card = document.createElement('div')//create a new div element, bởi vì div là một container element mà ta dùng trong idex.html
-        this.ui = document.createElement('div')
-        this.ui.className = "project-card"
-        this.ui.innerHTML = 
-        `<div class="project-card">
-            <div class="card-header">
-                <p style="background-color: #ca8134; padding: 10px; border-radius: 8px; aspect-ratio: 1;">HC</p>
-                <div>
-                    <h5>${this.name}</h5>
-                    <p>${this.description}</p>
-                </div>
-            </div>
-            <div class="card-content">
-                <div class="card-property">
-                    <p style="color: #969696;">Status</p>
-                    <p>${this.status}</p>
-                </div>
-                <div class="card-property">
-                    <p style="color: #969696;">Role</p>
-                    <p>${this.userRole}</p>
-                </div>
-                <div class="card-property">
-                    <p style="color: #969696;">Cost</p>
-                    <p>$${this.cost}</p>
-                </div>
-                <div class="card-property">
-                    <p style="color: #969696;">Estimated Progress</p>
-                    <p>${this.process * 100}%</p>
-                </div>
-            </div>
-         </div>`}
+    </div>`
+  }
 }
+
+
+        

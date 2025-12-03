@@ -113,6 +113,10 @@ button:hover {
 
 /* Content styles */
 #content{
+    height: 100vh; /* hoặc 100% nếu parent đã có height */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     
 }
 
@@ -282,3 +286,7 @@ input:focus, textarea:focus, select:focus {
     width: 100%;
     height:min-content;
 }
+
+/* Cụ thể: chỉ target field shortFinishDate */
+p[data-project-info="initials"] 
+    {text-transform: uppercase;}
