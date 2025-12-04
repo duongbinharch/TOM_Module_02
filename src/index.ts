@@ -63,12 +63,20 @@ if(projectForm && projectForm instanceof HTMLFormElement) {// check projectForm 
   projectForm.addEventListener("submit", (e) => {// e được hiểu là event được truyền vào khi sự kiện submit được kích hoạt, nó chứa thông tin về sự kiện đó, không thực sự là biến dữ liệu
     e.preventDefault()//This is to prevent the default behavior of the form/not be refreshed, which is to submit the form to the server
     const formData = new FormData(projectForm)//This is to create a new FormData object with the data from the form
+
+    // Validate / normalize finish date: use 15 Aug 1991 when invalid
+    const finishRaw = formData.get("finishDate") as string | null
+    let finishDate = new Date(finishRaw ?? "1991-08-15")
+    if (isNaN(finishDate.getTime())) {
+      finishDate = new Date("1991-08-15")
+    }
+
     const projectData : IProject = { //Tạo 1 object projectData với IProject interface, chứa dữ liệu từ form
       name: formData.get("name") as string, //Lấy dữ liệu từ form, và ép kiểu về string
       description: formData.get("description") as string,
       status: formData.get("status") as ProjectStatus, //Ép kiểu về ProjectStatus
       userRole: formData.get("userRole") as UserRole,
-      finishDate: new Date(formData.get("finishDate") as string) //Ép kiểu về Date
+      finishDate // dùng finishDate đã được kiểm tra
     }
     
     try {
