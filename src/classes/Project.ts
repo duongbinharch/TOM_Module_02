@@ -140,7 +140,24 @@ export class Project implements IProject{//use the "implements" keyword to imple
 
     </div>`
   }
+  // cập nhật DOM card khi project thay đổi
+  refreshUI() {
+    if (!this.ui) return
+    const initialsEl = this.ui.querySelector('[data-project-info="initials"]') as HTMLElement | null
+    const nameEl = this.ui.querySelector('[data-project-info="name"]') as HTMLElement | null
+    const descEl = this.ui.querySelector('[data-project-info="description"]') as HTMLElement | null
+    const statusEl = this.ui.querySelector('[data-project-info="status"]') as HTMLElement | null
+    const roleEl = this.ui.querySelector('[data-project-info="role"]') as HTMLElement | null
+    const finishEl = this.ui.querySelector('[data-project-info="finishDate"]') as HTMLElement | null
+
+    if (initialsEl) initialsEl.textContent = this.initials ?? ""
+    if (this.initialsColor && initialsEl) initialsEl.style.backgroundColor = this.initialsColor
+    if (nameEl) nameEl.textContent = this.name ?? ""
+    if (descEl) descEl.textContent = this.description ?? ""
+    if (statusEl) statusEl.textContent = String(this.status ?? "")
+    if (roleEl) roleEl.textContent = String(this.userRole ?? "")
+    if (finishEl) finishEl.textContent = this.shortFinishDate ?? (this.finishDate ? new Date(this.finishDate).toLocaleDateString("vi-VN") : "")
+  }
 }
 
 
-        

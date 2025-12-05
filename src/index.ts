@@ -58,6 +58,12 @@ if(cancelButton) {
 }
 
 const projectForm = document.getElementById("new-project-form")//Biến chứa thông tin project mới
+
+// removed duplicate submit handler — keep only the single guarded handler later in file
+// if(projectForm && projectForm instanceof HTMLFormElement) {
+//   projectForm.addEventListener("submit", (e) => { ... old handler ... })
+// } else { console.warn("The project form was not found. Check the ID!") }
+
 // ---- TẠO DỰ ÁN MỚI TỪ FORM // ---- New Project Form Submit -----------------------------------------------------------------------------
 if(projectForm && projectForm instanceof HTMLFormElement) {// check projectForm có giá trị và là 1 HTMLFormElement không
   projectForm.addEventListener("submit", (e) => {// e được hiểu là event được truyền vào khi sự kiện submit được kích hoạt, nó chứa thông tin về sự kiện đó, không thực sự là biến dữ liệu
@@ -139,5 +145,139 @@ if (importProjectsBtn) {
 }
   
 
-//HÀM
+let currentEditingId: string | null = null
+
+function openProjectModal(mode: "new" | "edit", project?: any) {
+  console.log('openProjectModal called', mode, project?.id ?? null)
+
+  let dialog = document.getElementById("new-project-modal") as HTMLDialogElement | null
+  const form = document.getElementById("new-project-form") as HTMLFormElement | null
+  if (!dialog || !form) {
+    console.warn('Modal or form not found: new-project-modal / new-project-form')
+    return
+  }
+
+  // nếu dialog nằm trong một container bị display:none thì di chuyển tạm ra body
+  if (dialog.parentElement !== document.body) {
+    document.body.appendChild(dialog)
+    console.debug('Moved dialog to document.body to ensure visibility')
+  }
+
+  // ưu tiên style để tránh bị css ẩn
+  dialog.style.zIndex = '9999'
+  dialog.style.position = 'fixed'
+
+  const title = form.querySelector("h2")
+  if (title) title.textContent = mode === "edit" ? "Edit Project" : "New Project"
+
+  form.reset()
+  currentEditingId = null
+
+  if (mode === "edit" && project) {
+    currentEditingId = project.id ? String(project.id) : null
+
+    const nameInput = form.querySelector('input[name="name"]') as HTMLInputElement | null
+    if (nameInput) nameInput.value = project.name ?? ""
+
+    const descInput = form.querySelector('textarea[name="description"]') as HTMLTextAreaElement | null
+    if (descInput) descInput.value = project.description ?? ""
+
+    const roleEl = form.querySelector('select[name="userRole"]') as HTMLSelectElement | null
+    if (roleEl) roleEl.value = project.userRole ?? roleEl.value
+
+    const statusEl = form.querySelector('select[name="status"]') as HTMLSelectElement | null
+    if (statusEl) statusEl.value = project.status ?? statusEl.value
+
+    const finishEl = form.querySelector('input[name="finishDate"]') as HTMLInputElement | null
+    if (finishEl && project && project.finishDate != null) {
+      const d = new Date(project.finishDate)
+      if (!isNaN(d.getTime())) finishEl.value = d.toISOString().slice(0, 10)
+      else finishEl.value = ""
+    }
+  }
+
+  try {
+    dialog.showModal()
+    console.log('dialog.showModal succeeded, dialog.open=', !!dialog.open)
+  } catch (err) {
+    console.warn('dialog.showModal failed, falling back to manual open. Error:', err)
+    // fallback: set attribute open + display block
+    try {
+      dialog.setAttribute('open', '')
+      dialog.style.display = 'block'
+      dialog.style.zIndex = '9999'
+      console.log('dialog opened via fallback')
+    } catch (e) {
+      console.error('fallback open failed', e)
+    }
+  }
+}
+
+// ensure a global opener is available (ProjectsManager calls this)
+;(window as any).openProjectEditor = (projectId: string) => {
+  console.log('window.openProjectEditor called for', projectId)
+  // projectsManager should be the instance you created in this module
+  const pm = (window as any).projectsManager ?? (typeof projectsManager !== 'undefined' ? projectsManager : null)
+  const project = pm && typeof pm.findById === 'function' ? pm.findById(projectId) : null
+  if (!project) {
+    console.warn('openProjectEditor: project not found', projectId)
+    return
+  }
+  openProjectModal('edit', project)
+}
+
+// // modify existing submit handler: build payload and branch create/update
+// let projectFormListenerAttached = (window as any).__projectFormListenerAttached ?? false
+// if (!projectFormListenerAttached) {
+//   if (projectForm && projectForm instanceof HTMLFormElement) {
+//     projectForm.addEventListener("submit", (e) => {
+//       e.preventDefault() // quan trọng: ngăn reload trang
+
+//       const formData = new FormData(projectForm)
+//       const name = (formData.get("name") as string ?? "").trim()
+
+//       // quick validation client-side before calling manager
+//       if (name.length <= 5) {
+//         // show error modal (reuse existing error UI)
+//         const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
+//         const errorPara = errorDialog?.querySelector<HTMLParagraphElement>("p")
+//         if (errorPara) errorPara.textContent = "Project name must be at least 6 characters long"
+//         // console.log(errorPara)
+//         try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog.style.display = "block" }
+//         return
+//       }
+
+//       // build payload (normalize finish date)
+//       const finishRaw = formData.get("finishDate") as string | null
+//       let finishDate = new Date(finishRaw ?? "1991-08-15")
+//       if (isNaN(finishDate.getTime())) finishDate = new Date("1991-08-15")
+
+//       const payload: IProject = {
+//         name,
+//         description: (formData.get("description") as string) ?? "",
+//         userRole: ((formData.get("userRole") as string) ?? "developer").toLowerCase() as UserRole,
+//         status: ((formData.get("status") as string) ?? "pending").toLowerCase() as ProjectStatus,
+//         finishDate
+//       }
+
+//       try {
+//         if (currentEditingId) {
+//           projectsManager.updateProject(currentEditingId, payload)
+//           currentEditingId = null
+//         } else {
+//           projectsManager.newProject(payload)
+//         }
+//         projectForm.reset()
+//         const modal = document.getElementById("new-project-modal") as HTMLDialogElement | null
+//         if (modal) try { modal.close() } catch { modal.style.display = "none" }
+//       } catch (err: any) {
+//         const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
+//         const errorPara = errorDialog?.querySelector<HTMLParagraphElement>("p")
+//         if (errorPara) errorPara.textContent = (err instanceof Error) ? err.message : String(err)
+//         try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog!.style.display = "block" }
+//       }
+//     })
+//     ;(window as any).__projectFormListenerAttached = true
+//   }
+// }
 

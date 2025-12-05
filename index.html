@@ -21,44 +21,46 @@
     <div class="page" id="projects-page" >
       <!-- This is the new modal page or dialog page with the title and the button to create new project -->
       <dialog id="new-project-modal">
-        <form id="new-project-form"><!-- This is the form to create a new project, Dùng trong index.ts-->
+        <form id="new-project-form">
           <h2>New Project</h2>
+
           <div class="input-list">
             <div class="form-field-container">
               <label for="projectName"><span class="material-icons-round">apartment</span>Name</label>
-              <input name="name" type="text" placeholder="What's the name of your project?" id="projectName"> 
-              <p style="color : gray; font-size: var(--font-sm); margin-top: 5px; font-style: italic;">TIP: Give it a short name</p>
+              <input name="name" type="text" placeholder="What's the name of your project?" id="projectName" required>
             </div>
+
             <div class="form-field-container">
-              <label for="decription"><span class="material-icons-round">subject</span>Decription</label>
-              <textarea name="description" cols="30" rows="5" placeholder="Give you project a nice description! So people is jealous about it." id="decription"></textarea>
+              <label for="projectDescription">Description</label>
+              <textarea name="description" id="projectDescription" placeholder="Describe the project"></textarea>
             </div>
+
             <div class="form-field-container">
-              <label for="role"><span class="material-icons-round">person</span>Role</label>
-              <select id="role" name="userRole">
-                <option>Architect</option>
-                <option>Engineer</option>
-                <option>Developer</option>
+              <label for="projectStatus">Status</label>
+              <select name="status" id="projectStatus">
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="finished">Finished</option>
               </select>
             </div>
+
             <div class="form-field-container">
-              <label for="status"><span class="material-icons-round">not_listed_location</span>Status</label>
-              <select id="status" name="status">
-                <option>Pending</option>
-                <option>Active</option>
-                <option>Inactive</option>
+              <label for="projectRole">Role</label>
+              <select name="userRole" id="projectRole">
+                <option value="architect">Architect</option>
+                <option value="engineer">Engineer</option>
+                <option value="developer">Developer</option>
               </select>
             </div>
+
             <div class="form-field-container">
-              <label for="finishDate">
-                <span class="material-icons-round">calendar_month</span>
-                Finish Date
-              </label>
-              <input type="date" name="finishDate" id="finishDate"></input>
+              <label for="projectFinish">Finish Date</label>
+              <input name="finishDate" id="projectFinish" type="date">
             </div>
-            <div id="button-new-project" style="display: flex; margin: 10px 0px 10px auto; column-gap: 10px;">
-              <button id ="form-cancel-button" type="button" style="background-color: transparent;" class="button1">Cancel</button>
-              <button type="submit" style="background-color: rgb(18, 145, 18);">Accept</button>
+
+            <div style="display:flex; gap:12px; margin-top:16px;">
+              <button type="submit" class="btn-primary">Save</button>
+              <button id="form-cancel-button" type="button" class="btn-secondary">Cancel</button>
             </div>
           </div>
           
@@ -244,14 +246,14 @@
       <!-- Under header is the main page content -->
       <div class="main-page-content">
         <!-- DASHBOARD CARD 1: PROJECT INFORMATION --- This will is the project information page as a 1st area on the right side -->
-        <div style="display: flex ; flex-direction: column; row-gap: 30px;">
+        <div style="display: flex; flex-direction: column; row-gap: 30px;">
           <!-- The fist this is an panel of project information like name, parameters, progress bar, etc... -->
           <div class="dashboard-card" style="padding: 30px 0;">
             <!-- An area for the Project text Icon (graphic): HC and 1 button to access the project parameter for editing feature -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0px 30px; margin-bottom: 30px;">
               <p data-project-info="initials" style="font-size: 20px; background-color: #ca8134; aspect-ratio: 1; border-radius: 100%; padding: 12px;">HC</p>
               <p data-project-info="id" style="display:none">Id</p>
-              <button class="btn-secondary"><p style="width: 100%;">Edit</p></button>
+              <button class="btn-secondary" data-action="edit"><p style="width: 100%;">Edit</p></button>
             </div>
             <!-- An area helps to contain project name,  parameters, progress bar, etc...  -->
             <div style="padding: 0 30px">

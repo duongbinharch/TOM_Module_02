@@ -70,36 +70,87 @@ export class ProjectsManager{
       this.list.push(project)//thêm project vào mảng list
       return project//trả về project mới
   }
-    
-  private setDetailsPage(project: Project): void {
-    const detailsPage = document.getElementById("project-details")
-    if (!detailsPage) { return }
-
-    const initialsEl = detailsPage.querySelector<HTMLElement>("[data-project-info='initials']")
-    const idEl = detailsPage.querySelector<HTMLElement>("[data-project-info='id']")
-    const nameEl = detailsPage.querySelector<HTMLElement>("[data-project-info='name']")
-    const descEl = detailsPage.querySelector<HTMLElement>("[data-project-info='description']")
-    const statusEl = detailsPage.querySelector<HTMLElement>("[data-project-info='status']")
-    const costEl = detailsPage.querySelector<HTMLElement>("[data-project-info='cost']")
-    const roleEl = detailsPage.querySelector<HTMLElement>("[data-project-info='role']")
-    const finishEl = detailsPage.querySelector<HTMLElement>("[data-project-info='finishDate']")
-    const progressEl = detailsPage.querySelector<HTMLElement>("[data-project-info='progress']")
-
-    if (initialsEl) {
-      initialsEl.textContent = project.initials ?? ''
-      if (project.initialsColor) initialsEl.style.backgroundColor = project.initialsColor
-      initialsEl.style.display = ''
-    }
-    if (idEl) idEl.textContent = project.id ?? ''
-    if (nameEl) nameEl.textContent = project.name ?? ''
-    if (descEl) descEl.textContent = project.description ?? ''
-    if (statusEl) statusEl.textContent = String(project.status ?? '')
-    if (costEl) costEl.textContent = `$ ${project.cost ?? 0}`
-    if (roleEl) roleEl.textContent = String(project.userRole ?? '')
-    if (finishEl) finishEl.textContent = project.shortFinishDate ?? new Date(project.finishDate).toLocaleDateString("vi-VN")
-    if (progressEl) progressEl.textContent = `${Math.round(project.progress ?? 0)}%`
-  }
   
+  findById(id: string) {
+    return this.list.find(p => p.id === id) ?? null
+  }
+
+  updateProject(id: string, data: IProject) {
+    const project = this.findById(id)
+    if (!project) throw new Error("Project not found")
+
+    // merge allowed fields (avoid overwriting id)
+    project.name = data.name ?? project.name
+    project.description = data.description ?? project.description
+    project.userRole = data.userRole ?? project.userRole
+    project.status = data.status ?? project.status
+    project.finishDate = data.finishDate ?? project.finishDate
+
+    // recalc derived values
+    if (typeof (project as any).findInitials === "function") (project as any).findInitials()
+    if (typeof (project as any).setShortFinishDate === "function") (project as any).setShortFinishDate()
+    if (typeof (project as any).refreshUI === "function") (project as any).refreshUI()
+
+    // refresh detail page if open
+    this.setDetailsPage(project)
+    return project
+  }
+
+  private setDetailsPage(project: Project): void {
+    const detailPage = document.getElementById("project-details")
+    if (!detailPage) return
+
+    // populate fields (minimal example)
+    const nameH2 = detailPage.querySelector<HTMLElement>('h2[data-project-info="name"]')
+    const descP = detailPage.querySelector<HTMLElement>('p[data-project-info="description"]')
+    const idP = detailPage.querySelector<HTMLElement>('p[data-project-info="id"]')
+    const initialsP = detailPage.querySelector<HTMLElement>('p[data-project-info="initials"]')
+    const statusP = detailPage.querySelector<HTMLElement>('p[data-project-info="status"]')
+    const roleP = detailPage.querySelector<HTMLElement>('p[data-project-info="role"]')
+    const costP = detailPage.querySelector<HTMLElement>('p[data-project-info="cost"]')
+    const finishP = detailPage.querySelector<HTMLElement>('p[data-project-info="finishDate"]')
+
+    if (nameH2) nameH2.textContent = project.name ?? ""
+    if (descP) descP.textContent = project.description ?? ""
+    if (idP) idP.textContent = project.id ?? ""
+    if (initialsP) initialsP.textContent = project.initials ?? ""
+    if (statusP) statusP.textContent = String(project.status ?? "")
+    if (roleP) roleP.textContent = String(project.userRole ?? "")
+    if (costP) costP.textContent = project.cost != null ? `$ ${project.cost}` : `$ 0`
+    if (finishP) {
+      if (project.shortFinishDate) finishP.textContent = project.shortFinishDate
+      else if (project.finishDate) {
+        const d = new Date(project.finishDate)
+        finishP.textContent = !isNaN(d.getTime()) ? d.toLocaleDateString("vi-VN") : ""
+      } else finishP.textContent = ""
+    }
+
+    // bind Edit button (sử dụng data-action để chọn chính xác)
+    const editBtn = detailPage.querySelector<HTMLButtonElement>('[data-action="edit"]')
+    if (editBtn) {
+      // replace node để đảm bảo các listener cũ bị loại bỏ
+      const newBtn = editBtn.cloneNode(true) as HTMLButtonElement
+      editBtn.replaceWith(newBtn)
+
+      newBtn.addEventListener('click', (ev) => {
+        ev.preventDefault()
+        console.log('Edit button clicked for project id=', project.id)
+        const opener = (window as any).openProjectEditor
+        if (typeof opener === 'function') {
+          opener(String(project.id))
+        } else {
+          console.warn('openProjectEditor not available on window')
+        }
+      })
+    } else {
+      console.warn('Edit button not found inside project-details')
+    }
+
+    // show detail page
+    const projectsPage = document.getElementById("projects-page")
+    if (projectsPage) projectsPage.style.display = "none"
+    detailPage.style.display = "flex"
+  }
     
   /*
   clearList(){
