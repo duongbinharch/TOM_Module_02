@@ -1,10 +1,11 @@
-import { IProject, Project } from './Project';//import Project class from Project.ts
+import { IProject, Project } from './Project.ts';//import Project class from Project.ts
+import { ToDos } from "./ToDos.ts"
 
+export class ProjectsManager {
+  list: Project[] = []
+  ui: HTMLElement
+  todosMap: Record<string, ToDos> = {} // projectId -> ToDos instance
 
-export class ProjectsManager{
-  list: Project[] = []//mảng chứa các project hiện tại là empty array
-  ui: HTMLElement//UI của project this will be the HTML container for all the projects cards
-  
   constructor(container: HTMLElement) {
     //constructor là một phương thức đặc biệt trong một class được gọi khi một instance mới của class được tạo, 
     //và nó được sử dụng để khởi tạo các thuộc tính của object
@@ -100,30 +101,79 @@ export class ProjectsManager{
     const detailPage = document.getElementById("project-details")
     if (!detailPage) return
 
-    // populate fields (minimal example)
-    const nameH2 = detailPage.querySelector<HTMLElement>('h2[data-project-info="name"]')
-    const descP = detailPage.querySelector<HTMLElement>('p[data-project-info="description"]')
-    const idP = detailPage.querySelector<HTMLElement>('p[data-project-info="id"]')
-    const initialsP = detailPage.querySelector<HTMLElement>('p[data-project-info="initials"]')
-    const statusP = detailPage.querySelector<HTMLElement>('p[data-project-info="status"]')
-    const roleP = detailPage.querySelector<HTMLElement>('p[data-project-info="role"]')
-    const costP = detailPage.querySelector<HTMLElement>('p[data-project-info="cost"]')
-    const finishP = detailPage.querySelector<HTMLElement>('p[data-project-info="finishDate"]')
+    // debug
+    console.debug('setDetailsPage called for', project?.id, project?.name, project?.description)
 
-    if (nameH2) nameH2.textContent = project.name ?? ""
-    if (descP) descP.textContent = project.description ?? ""
-    if (idP) idP.textContent = project.id ?? ""
-    if (initialsP) initialsP.textContent = project.initials ?? ""
-    if (statusP) statusP.textContent = String(project.status ?? "")
-    if (roleP) roleP.textContent = String(project.userRole ?? "")
-    if (costP) costP.textContent = project.cost != null ? `$ ${project.cost}` : `$ 0`
-    if (finishP) {
-      if (project.shortFinishDate) finishP.textContent = project.shortFinishDate
+    // Update every element that holds the project name
+    const nameEls = Array.from(detailPage.querySelectorAll<HTMLElement>('[data-project-info="name"]'))
+    nameEls.forEach(el => { el.textContent = project.name ?? '' })
+
+    // Update every element that holds the project description
+    const descEls = Array.from(detailPage.querySelectorAll<HTMLElement>('[data-project-info="description"]'))
+    descEls.forEach(el => { el.textContent = project.description ?? '' })
+
+    // other fields (status, role, finishDate, initials, id, etc.)
+    const initialsEl = detailPage.querySelector<HTMLElement>('[data-project-info="initials"]')
+    if (initialsEl) {
+      initialsEl.textContent = project.initials ?? this.getInitialsFromName(project.name)
+      if ((project as any).initialsColor) initialsEl.style.backgroundColor = (project as any).initialsColor
+    }
+
+    const idEl = detailPage.querySelector<HTMLElement>('[data-project-info="id"]')
+    if (idEl) idEl.textContent = project.id ?? ''
+
+    const statusEl = detailPage.querySelector<HTMLElement>('[data-project-info="status"]')
+    if (statusEl) statusEl.textContent = String(project.status ?? '')
+
+    const roleEl = detailPage.querySelector<HTMLElement>('[data-project-info="role"]')
+    if (roleEl) roleEl.textContent = String(project.userRole ?? '')
+
+    const finishEl = detailPage.querySelector<HTMLElement>('[data-project-info="finishDate"]')
+    if (finishEl) {
+      if ((project as any).shortFinishDate) finishEl.textContent = (project as any).shortFinishDate
       else if (project.finishDate) {
         const d = new Date(project.finishDate)
-        finishP.textContent = !isNaN(d.getTime()) ? d.toLocaleDateString("vi-VN") : ""
-      } else finishP.textContent = ""
+        finishEl.textContent = !isNaN(d.getTime()) ? d.toLocaleDateString('vi-VN') : ''
+      } else finishEl.textContent = ''
     }
+
+    // --- Ensure todos container and ToDos manager for this project ---
+    let todoContainer = detailPage.querySelector<HTMLElement>("#todos-list")
+    if (!todoContainer) {
+      // create container where original .todo-item area is
+      const todoArea = detailPage.querySelector<HTMLElement>(".dashboard-card")
+      todoContainer = document.createElement("div")
+      todoContainer.id = "todos-list"
+      todoContainer.style.display = "flex"
+      todoContainer.style.flexDirection = "column"
+      todoContainer.style.rowGap = "12px"
+      if (todoArea) {
+        // append near existing todo template area
+        const inner: HTMLElement | null = todoArea.querySelector<HTMLElement>("div[style*='padding']");
+        ((inner ?? todoArea) as HTMLElement).appendChild(todoContainer)
+      } else {
+        detailPage.appendChild(todoContainer)
+      }
+    }
+
+    // create or rebind ToDos manager for this project
+    let todos = this.todosMap[project.id]
+    if (!todos) {
+      todos = new ToDos(todoContainer)
+      // if project already had persisted todos data, import them
+      if ((project as any).todos && Array.isArray((project as any).todos)) {
+        todos.importData((project as any).todos)
+      }
+      this.todosMap[project.id] = todos
+    } else {
+      // update container (in case DOM moved) and re-render
+      todos.container = todoContainer
+      todos.renderAll()
+    }
+
+    // expose current project's todos manager for index.ts handlers
+    ;(window as any).todosManager = todos
+    ;(window as any).currentProjectId = project.id
 
     // bind Edit button (sử dụng data-action để chọn chính xác)
     const editBtn = detailPage.querySelector<HTMLButtonElement>('[data-action="edit"]')
@@ -229,5 +279,12 @@ export class ProjectsManager{
     })
     input.click()//simulate a click on the input element, giả lập một click vào phần tử input
     
+  }
+
+  private getInitialsFromName(name?: string): string {
+    if (!name) return ""
+    const parts = name.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase()
   }
 }

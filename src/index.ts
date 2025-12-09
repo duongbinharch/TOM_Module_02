@@ -57,76 +57,89 @@ if(cancelButton) {
   console.warn("cancelButton not found")
 }
 
-const projectForm = document.getElementById("new-project-form")//Biến chứa thông tin project mới
 
-// removed duplicate submit handler — keep only the single guarded handler later in file
-// if(projectForm && projectForm instanceof HTMLFormElement) {
-//   projectForm.addEventListener("submit", (e) => { ... old handler ... })
-// } else { console.warn("The project form was not found. Check the ID!") }
+// ensure projectsManager instance is reachable (created earlier in this file or from ProjectsManager.ts)
+// prefer the instance created in this module; fallback to window
+const pm = (typeof projectsManager !== "undefined" ? (projectsManager as any) : (window as any).projectsManager) as any
 
-// ---- TẠO DỰ ÁN MỚI TỪ FORM // ---- New Project Form Submit -----------------------------------------------------------------------------
-if(projectForm && projectForm instanceof HTMLFormElement) {// check projectForm có giá trị và là 1 HTMLFormElement không
-  projectForm.addEventListener("submit", (e) => {// e được hiểu là event được truyền vào khi sự kiện submit được kích hoạt, nó chứa thông tin về sự kiện đó, không thực sự là biến dữ liệu
-    e.preventDefault()//This is to prevent the default behavior of the form/not be refreshed, which is to submit the form to the server
-    const formData = new FormData(projectForm)//This is to create a new FormData object with the data from the form
+// single submit handler that handles both New and Edit
+const projectForm = document.getElementById("new-project-form") as HTMLFormElement | null
+if (projectForm && projectForm instanceof HTMLFormElement) {
+  // remove existing duplicated listeners by using a guard
+  if (!(window as any).__projectFormSubmitBound) {
+    projectForm.addEventListener("submit", (e) => {
+      e.preventDefault()
 
-    // Validate / normalize finish date: use 15 Aug 1991 when invalid
-    const finishRaw = formData.get("finishDate") as string | null
-    let finishDate = new Date(finishRaw ?? "1991-08-15")
-    if (isNaN(finishDate.getTime())) {
-      finishDate = new Date("1991-08-15")
-    }
+      const formData = new FormData(projectForm)
+      const name = (formData.get("name") as string ?? "").trim()
+      const description = (formData.get("description") as string ?? "").trim()
+      const status = (formData.get("status") as string) ?? ""
+      const userRole = (formData.get("userRole") as string) ?? ""
+      const finishRaw = formData.get("finishDate") as string | null
 
-    const projectData : IProject = { //Tạo 1 object projectData với IProject interface, chứa dữ liệu từ form
-      name: formData.get("name") as string, //Lấy dữ liệu từ form, và ép kiểu về string
-      description: formData.get("description") as string,
-      status: formData.get("status") as ProjectStatus, //Ép kiểu về ProjectStatus
-      userRole: formData.get("userRole") as UserRole,
-      finishDate // dùng finishDate đã được kiểm tra
-    }
-    
-    try {
-      const project = projectsManager.newProject(projectData)// Tạo một project mới từ projectData và ghi vào mảng list trong projectsManager
-      projectForm.reset()//Reset the form after the project is created
-      toggleModal("new-project-modal")//Close the modal after the project is created
-      //console.log(project)
-      
-    } catch (err) {
-      //alert(err)//Show an alert with the error message if the project name is already in use
+      // normalize finish date with fallback 1991-08-15 when invalid/empty
+      let finishDate = new Date(finishRaw ?? "1991-08-15")
+      if (isNaN(finishDate.getTime())) finishDate = new Date("1991-08-15")
 
-      //SHOW ERROR MODAL
-      const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
-      //const errorParagraph = errorDialog?.querySelector<HTMLParagraphElement>("p") ?? null
-      let errorParagraph: HTMLParagraphElement | null;
-      if (errorDialog) {
-        errorParagraph = errorDialog.querySelector<HTMLParagraphElement>("p");
-      } else {
-        errorParagraph = null;
+      // client-side validation
+      if (!name || name.length < 6) {
+        const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
+        const errorParagraph = errorDialog?.querySelector<HTMLParagraphElement>("p") ?? null
+        if (errorParagraph) errorParagraph.textContent = "Project name must be at least 6 characters long"
+        try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog.style.display = "block" }
+        return
       }
-      const cancelErrorBtn = document.getElementById("cancel-error-popup-button") as HTMLButtonElement | null
 
-      // set message from thrown Error
-      const message = (err instanceof Error) ? err.message : String(err)
-      if (errorParagraph) errorParagraph.textContent = message
+      const payload = {
+        name,
+        description,
+        status,
+        userRole,
+        finishDate
+      }
 
-      // show the dialog
-      toggleModal("error-popup-modal")
-
-      // attach a single handler (replace any previous)
-      if (cancelErrorBtn) {
-        cancelErrorBtn.onclick = (e) => {
-          e.preventDefault()
-          toggleModal("error-popup-modal")
+      try {
+        if (currentEditingId) {
+          // prefer ProjectsManager API updateProject
+          if (pm && typeof pm.updateProject === "function") {
+            pm.updateProject(currentEditingId, payload)
+          } else {
+            // fallback: try to find and patch project object then refresh UI if possible
+            const find = pm && typeof pm.findById === "function" ? pm.findById(currentEditingId) : null
+            if (find) {
+              Object.assign(find, payload)
+              if (typeof pm.updateProject !== "function" && typeof find.refreshUI === "function") find.refreshUI()
+            }
+          }
+          currentEditingId = null
+        } else {
+          if (pm && typeof pm.newProject === "function") {
+            pm.newProject(payload)
+          } else {
+            console.warn("projectsManager.newProject not available; project not created", payload)
+          }
         }
+
+        // reset form and close modal
+        projectForm.reset()
+        const dialog = document.getElementById("new-project-modal") as HTMLDialogElement | null
+        if (dialog) {
+          try { dialog.close() } catch { dialog.style.display = "none" }
+        }
+      } catch (err) {
+        const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
+        const errorParagraph = errorDialog?.querySelector<HTMLParagraphElement>("p") ?? null
+        const message = (err instanceof Error) ? err.message : String(err)
+        if (errorParagraph) errorParagraph.textContent = message
+        try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog!.style.display = "block" }
       }
-    }
-      
-      
     })
-  } else {
-    console.warn("The project form was not found. Check the ID!")
+
+    ;(window as any).__projectFormSubmitBound = true
   }
-  
+} else {
+  console.warn("new-project-form not found in DOM")
+}
 
 //XUẤT NHẬP DỮ LIỆU DẠNG JSON
 //Xuất dữ liệu dự án ra file JSON
@@ -144,7 +157,8 @@ if (importProjectsBtn) {
   })
 }
   
-
+// ---- OPEN EDIT PROJECT MODAL FUNCTION -----------------------------------------------------------------------------
+// Biến toàn cục để theo dõi project hiện đang được chỉnh sửa
 let currentEditingId: string | null = null
 
 function openProjectModal(mode: "new" | "edit", project?: any) {
@@ -226,58 +240,75 @@ function openProjectModal(mode: "new" | "edit", project?: any) {
   openProjectModal('edit', project)
 }
 
-// // modify existing submit handler: build payload and branch create/update
-// let projectFormListenerAttached = (window as any).__projectFormListenerAttached ?? false
-// if (!projectFormListenerAttached) {
-//   if (projectForm && projectForm instanceof HTMLFormElement) {
-//     projectForm.addEventListener("submit", (e) => {
-//       e.preventDefault() // quan trọng: ngăn reload trang
+// Open new-todo modal when user clicks the add icon (selector in your index.html)
+const addTodoBtn = document.querySelector<HTMLElement>('[data-action="add-todo"]')
+const newTodoDialog = document.getElementById('new-todo-modal') as HTMLDialogElement | null
+const newTodoForm = document.getElementById('new-todo-form') as HTMLFormElement | null
+const cancelNewTodoBtn = document.getElementById('cancel-new-todo') as HTMLButtonElement | null
 
-//       const formData = new FormData(projectForm)
-//       const name = (formData.get("name") as string ?? "").trim()
+if (addTodoBtn && newTodoDialog && newTodoForm) {
+  addTodoBtn.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    newTodoForm.reset()
+    try { newTodoDialog.showModal() } catch { newTodoDialog.style.display = 'block' }
+  })
 
-//       // quick validation client-side before calling manager
-//       if (name.length <= 5) {
-//         // show error modal (reuse existing error UI)
-//         const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
-//         const errorPara = errorDialog?.querySelector<HTMLParagraphElement>("p")
-//         if (errorPara) errorPara.textContent = "Project name must be at least 6 characters long"
-//         // console.log(errorPara)
-//         try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog.style.display = "block" }
-//         return
-//       }
+  cancelNewTodoBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    try { newTodoDialog.close() } catch { newTodoDialog.style.display = 'none' }
+  })
 
-//       // build payload (normalize finish date)
-//       const finishRaw = formData.get("finishDate") as string | null
-//       let finishDate = new Date(finishRaw ?? "1991-08-15")
-//       if (isNaN(finishDate.getTime())) finishDate = new Date("1991-08-15")
+  newTodoForm.addEventListener('submit', (ev) => {
+    ev.preventDefault()
+    const fd = new FormData(newTodoForm)
+    const title = (fd.get('todoTitle') as string ?? '').trim()
+    if (!title) return
+    const description = (fd.get('todoDescription') as string ?? '').trim()
+    const dueRaw = fd.get('todoDueDate') as string | null
+    const due = dueRaw && dueRaw !== '' ? dueRaw : null
 
-//       const payload: IProject = {
-//         name,
-//         description: (formData.get("description") as string) ?? "",
-//         userRole: ((formData.get("userRole") as string) ?? "developer").toLowerCase() as UserRole,
-//         status: ((formData.get("status") as string) ?? "pending").toLowerCase() as ProjectStatus,
-//         finishDate
-//       }
+    // dynamic lookup of current project's ToDos manager
+    const todosMgr = (window as any).todosManager as any | undefined
+    const currentProjectId = (window as any).currentProjectId as string | undefined
+    const pm = (window as any).projectsManager as any | undefined
 
-//       try {
-//         if (currentEditingId) {
-//           projectsManager.updateProject(currentEditingId, payload)
-//           currentEditingId = null
-//         } else {
-//           projectsManager.newProject(payload)
-//         }
-//         projectForm.reset()
-//         const modal = document.getElementById("new-project-modal") as HTMLDialogElement | null
-//         if (modal) try { modal.close() } catch { modal.style.display = "none" }
-//       } catch (err: any) {
-//         const errorDialog = document.getElementById("error-popup-modal") as HTMLDialogElement | null
-//         const errorPara = errorDialog?.querySelector<HTMLParagraphElement>("p")
-//         if (errorPara) errorPara.textContent = (err instanceof Error) ? err.message : String(err)
-//         try { errorDialog?.showModal() } catch { if (errorDialog) errorDialog!.style.display = "block" }
-//       }
-//     })
-//     ;(window as any).__projectFormListenerAttached = true
-//   }
-// }
+    if (todosMgr && typeof todosMgr.newTodo === 'function') {
+      todosMgr.newTodo({ title, description, dueDate: due })
+      // sync into project's stored data
+      if (pm && currentProjectId) {
+        // use ProjectsManager.syncProjectTodos to persist and refresh detail
+        if (typeof pm.syncProjectTodos === 'function') {
+          pm.syncProjectTodos(currentProjectId)
+        } else {
+          // fallback: write directly into project object
+          const proj = pm.findById ? pm.findById(currentProjectId) : null
+          if (proj) (proj as any).todos = todosMgr.exportData?.() ?? []
+        }
+      }
+    } else {
+      // fallback: append DOM-only card (shouldn't happen if ProjectsManager.setDetailsPage created todosMgr)
+      const todosListEl = document.getElementById('todos-list')
+      if (todosListEl) {
+        const el = document.createElement('div')
+        el.className = 'todo-item'
+        el.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; column-gap: 15px; align-items: center;">
+              <span class="material-icons-round" style="padding: 10px; background-color: #686868; border-radius: 10px;">construction</span>
+              <p>${escapeHtml(title)}</p>
+            </div>
+            <p style="text-wrap: nowrap; margin-left: 10px;">${due ? new Date(due).toLocaleDateString() : ''}</p>
+          </div>`
+        todosListEl.appendChild(el)
+      }
+    }
 
+    try { newTodoDialog.close() } catch { newTodoDialog.style.display = 'none' }
+    newTodoForm.reset()
+  })
+} else {
+  console.warn('To-Do UI elements missing', { addTodoBtn, newTodoDialog, newTodoForm })
+}
+
+// small helper used by fallback
+function escapeHtml(s: string) { return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string)) }
