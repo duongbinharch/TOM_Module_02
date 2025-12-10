@@ -297,11 +297,11 @@
                   <span class="material-icons-round">search</span>
                   <input type="text" placeholder="Search To-Do's by name" style="width: 100%;">
                 </div>
-                <span class="material-icons-round">add</span>
+                <span class="material-icons-round" data-action="add-todo" style="cursor: pointer;">add</span>
               </div>
             </div>
             <!-- This will be the list of tasks -->
-            <div style="display: flex; flex-direction: column; padding: 10px 30px; row-gap: 20px;">
+            <div id="todos-list" style="display: flex; flex-direction: column; padding: 10px 30px; row-gap: 20px;">
               <div class="todo-item" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <!-- Grouping the icon with the decription of task -->
@@ -336,6 +336,33 @@
                 </div>
               </div>
             </div>
+            <!-- This is the modal for adding new To-Do task -->
+            <dialog id="new-todo-modal" style="padding: 20px;">
+              <form id="new-todo-form" style="margin: 20px 30px;">
+                <h2>New To‑Do</h2>
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Title</span>
+                    <input name="todoTitle" type="text" required placeholder="To‑Do title" 
+                           style="width: 100%; padding: 10px; box-sizing: border-box;">
+                  </label>
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Description</span>
+                    <textarea name="todoDescription" rows="3" placeholder="Optional" 
+                              style="width: 100%; padding: 10px; box-sizing: border-box; resize: vertical;"></textarea>
+                  </label>
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Due date</span>
+                    <input name="todoDueDate" type="date" 
+                           style="width: 100%; padding: 10px; box-sizing: border-box;">
+                  </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                  <button type="button" id="cancel-new-todo" class="btn-secondary">Cancel</button>
+                  <button type="submit" class="btn-primary">Add</button>
+                </div>
+              </form>
+            </dialog>
           </div>
         </div>
         
