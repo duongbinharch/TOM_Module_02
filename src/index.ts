@@ -240,6 +240,8 @@ function openProjectModal(mode: "new" | "edit", project?: any) {
   openProjectModal('edit', project)
 }
 
+
+// ---- TO-DOs MODAL AND FORM HANDLING -----------------------------------------------------------------------------
 // Open new-todo modal when user clicks the add icon (selector in your index.html)
 const addTodoBtn = document.querySelector<HTMLElement>('[data-action="add-todo"]')
 const newTodoDialog = document.getElementById('new-todo-modal') as HTMLDialogElement | null
@@ -312,3 +314,114 @@ if (addTodoBtn && newTodoDialog && newTodoForm) {
 
 // small helper used by fallback
 function escapeHtml(s: string) { return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string)) }
+
+
+// ---- EDIT TO-DO MODAL AND FORM HANDLING -----------------------------------------------------------------------------
+const editTodoDialog = document.getElementById('edit-todo-modal') as HTMLDialogElement | null
+const editTodoForm = document.getElementById('edit-todo-form') as HTMLFormElement | null
+const cancelEditTodoBtn = document.getElementById('cancel-edit-todo') as HTMLButtonElement | null
+const deleteTodoBtn = document.getElementById('delete-todo') as HTMLButtonElement | null
+let currentEditingTodoId: string | null = null
+
+if (editTodoDialog && editTodoForm) {
+  
+  // Lắng nghe event edit-todo từ ToDos.ts
+  const todosListEl = document.getElementById('todos-list')
+  if (todosListEl) {
+    todosListEl.addEventListener('todos:edit-todo', (e: any) => {
+      const todoData = e.detail
+      if (!todoData) return
+      
+      // Lưu ID của todo đang edit
+      currentEditingTodoId = todoData.id
+      
+      // Fill form với dữ liệu hiện tại
+      const titleInput = editTodoForm.querySelector('input[name="todoTitle"]') as HTMLInputElement | null
+      const descInput = editTodoForm.querySelector('textarea[name="todoDescription"]') as HTMLTextAreaElement | null
+      const dateInput = editTodoForm.querySelector('input[name="todoDueDate"]') as HTMLInputElement | null
+      
+      if (titleInput) titleInput.value = todoData.title ?? ''
+      if (descInput) descInput.value = todoData.description ?? ''
+      if (dateInput) dateInput.value = todoData.dueDate ?? ''
+      
+      // Mở modal
+      try { 
+        editTodoDialog.showModal() 
+      } catch { 
+        editTodoDialog.style.display = 'block' 
+      }
+    })
+  }
+  
+  // Xử lý submit form edit
+  editTodoForm.addEventListener('submit', (ev) => {
+    ev.preventDefault()
+    if (!currentEditingTodoId) return
+    
+    const fd = new FormData(editTodoForm)
+    const title = (fd.get('todoTitle') as string ?? '').trim()
+    if (!title) return
+    
+    const description = (fd.get('todoDescription') as string ?? '').trim()
+    const dueRaw = fd.get('todoDueDate') as string | null
+    const dueDate = dueRaw && dueRaw !== '' ? dueRaw : null
+    
+    // Cập nhật todo qua todosMgr
+    const todosMgr = (window as any).todosManager as any | undefined
+    if (todosMgr && typeof todosMgr.updateTodo === 'function') {
+      todosMgr.updateTodo(currentEditingTodoId, {
+        title,
+        description,
+        dueDate
+      })
+      
+      // Sync vào project data
+      const pm = (window as any).projectsManager as any | undefined
+      const currentProjectId = (window as any).currentProjectId as string | undefined
+      if (pm && currentProjectId && typeof pm.syncProjectTodos === 'function') {
+        pm.syncProjectTodos(currentProjectId)
+      }
+    }
+    
+    // Đóng modal và reset
+    try { editTodoDialog.close() } catch { editTodoDialog.style.display = 'none' }
+    editTodoForm.reset()
+    currentEditingTodoId = null
+  })
+  
+  // Cancel button
+  cancelEditTodoBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    try { editTodoDialog.close() } catch { editTodoDialog.style.display = 'none' }
+    editTodoForm.reset()
+    currentEditingTodoId = null
+  })
+  
+  // Delete button
+  deleteTodoBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    if (!currentEditingTodoId) return
+    
+    if (!confirm('Are you sure you want to delete this to-do?')) return
+    
+    const todosMgr = (window as any).todosManager as any | undefined
+    if (todosMgr && typeof todosMgr.deleteTodo === 'function') {
+      todosMgr.deleteTodo(currentEditingTodoId)
+      
+      // Sync vào project data
+      const pm = (window as any).projectsManager as any | undefined
+      const currentProjectId = (window as any).currentProjectId as string | undefined
+      if (pm && currentProjectId && typeof pm.syncProjectTodos === 'function') {
+        pm.syncProjectTodos(currentProjectId)
+      }
+    }
+    
+    // Đóng modal và reset
+    try { editTodoDialog.close() } catch { editTodoDialog.style.display = 'none' }
+    editTodoForm.reset()
+    currentEditingTodoId = null
+  })
+  
+} else {
+  console.warn('Edit To-Do UI elements missing', { editTodoDialog, editTodoForm })
+}

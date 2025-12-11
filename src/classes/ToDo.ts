@@ -41,7 +41,7 @@ export class ToDo implements IToDo {
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
           <small class="todo-due" style="color:#999">${this.formatDue()}</small>
-          <button class="todo-edit btn-secondary">Edit</button>
+          <button class="todo-edit btn-danger">Edit</button>
           <button class="todo-delete btn-danger">Delete</button>
         </div>
       </div>
@@ -54,7 +54,7 @@ export class ToDo implements IToDo {
     })
     el.querySelector<HTMLButtonElement>(".todo-edit")?.addEventListener("click", (e) => {
       e.preventDefault()
-      ;(window as any).openTodoEditor?.(this.id)
+      el.dispatchEvent(new CustomEvent("todo:edit-request", { detail: this.id }))
     })
     el.querySelector<HTMLButtonElement>(".todo-delete")?.addEventListener("click", (e) => {
       e.preventDefault()

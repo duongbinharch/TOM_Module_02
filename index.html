@@ -307,10 +307,13 @@
                   <!-- Grouping the icon with the decription of task -->
                   <div style="display: flex; column-gap: 15px; align-items: center;">
                     <span class="material-icons-round" style="padding: 10px; background-color: #686868; border-radius: 10px;">construction</span>
-                    <p>Make anything here as you want, even something longer.</p>
+                    <p data-todo-info="description">Make anything here as you want, even something longer.</p>
                   </div>
-                  <!-- Time-line of task -->
-                  <p style="text-wrap: nowrap; margin-left: 10px;">Fri, 20 sep</p>
+                  <!-- Time-line of task and Edit button -->
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <p data-todo-info="dueDate" style="text-wrap: nowrap; margin-left: 10px;">Fri, 20 sep</p>
+                    <span class="material-icons-round" data-action="edit-todo" style="cursor: pointer; color: #969696;">edit</span>
+                  </div>
                 </div>
               </div>
               <div class="todo-item" style="display: none;">
@@ -360,6 +363,38 @@
                 <div style="display: flex; justify-content: flex-end; gap: 12px;">
                   <button type="button" id="cancel-new-todo" class="btn-secondary">Cancel</button>
                   <button type="submit" class="btn-primary">Add</button>
+                </div>
+              </form>
+            </dialog>
+
+            <!-- This is the modal for editing existing To-Do task -->
+            <dialog id="edit-todo-modal" style="padding: 20px;">
+              <form id="edit-todo-form" style="margin: 20px 30px;">
+                <h2>Edit To‑Do</h2>
+                <input type="hidden" name="todoId">
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Title</span>
+                    <input name="todoTitle" type="text" required placeholder="To‑Do title" 
+                           style="width: 100%; padding: 10px; box-sizing: border-box;">
+                  </label>
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Description</span>
+                    <textarea name="todoDescription" rows="3" placeholder="Optional" 
+                              style="width: 100%; padding: 10px; box-sizing: border-box; resize: vertical;"></textarea>
+                  </label>
+                  <label style="display: flex; flex-direction: column; gap: 8px;">
+                    <span>Due date</span>
+                    <input name="todoDueDate" type="date" 
+                           style="width: 100%; padding: 10px; box-sizing: border-box;">
+                  </label>
+                </div>
+                <div style="display: flex; justify-content: space-between; gap: 12px;">
+                  <button type="button" id="delete-todo" class="btn-secondary" style="background-color: #d32f2f;">Delete</button>
+                  <div style="display: flex; gap: 12px;">
+                    <button type="button" id="cancel-edit-todo" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                  </div>
                 </div>
               </form>
             </dialog>

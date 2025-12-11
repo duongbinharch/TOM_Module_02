@@ -31,6 +31,24 @@ export class ToDos {
     return t
   }
 
+  
+  renderAll() {//Clear container and re-render all todos
+    this.container.innerHTML = ""//Clear container
+    this.list.forEach(t => { t.setUI(); if (t.ui) this.container.appendChild(t.ui); this.attachTodoEvents(t) })//Render each todo and attach events
+  }
+  
+  attachTodoEvents(todo: ToDo) {//Add event listener for delete request
+    if (!todo.ui) return
+    todo.ui.addEventListener("todo:delete-request", (ev: any) => {
+      this.deleteTodo(ev.detail as string)
+      console.log("Delete request received for todo ID:", ev.detail)
+    })
+    todo.ui.addEventListener("todo:edit-request", (ev: any) => {  // <--- thêm
+      this.editTodo(ev.detail as string)
+      console.log("Edit request received for todo ID:", ev.detail)  // <--- thêm
+    })
+  }
+  
   deleteTodo(id: string) {
     const idx = this.list.findIndex(t => t.id === id)
     if (idx === -1) return
@@ -38,16 +56,23 @@ export class ToDos {
     if (t.ui && t.ui.parentElement) t.ui.parentElement.removeChild(t.ui)
   }
 
-  renderAll() {
-    this.container.innerHTML = ""
-    this.list.forEach(t => { t.setUI(); if (t.ui) this.container.appendChild(t.ui); this.attachTodoEvents(t) })
-  }
-
-  attachTodoEvents(todo: ToDo) {
-    if (!todo.ui) return
-    todo.ui.addEventListener("todo:delete-request", (ev: any) => {
-      this.deleteTodo(ev.detail as string)
+  editTodo(id: string) {
+    const todo = this.findById(id)
+    if (!todo) return
+    
+    // Phát event để index.ts lắng nghe và mở modal edit với dữ liệu todo
+    const event = new CustomEvent("todos:edit-todo", { 
+      detail: { 
+        id: todo.id, 
+        title: todo.title,
+        description: todo.description,
+        dueDate: todo.dueDate,
+        done: todo.done,
+        priority: todo.priority
+      },
+      bubbles: true
     })
+    this.container.dispatchEvent(event)
   }
 
   exportData() { return this.list.map(t => t.toJSON()) }
